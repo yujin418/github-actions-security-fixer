@@ -1,90 +1,131 @@
-# github-actions-security-fixer
-GitHub Actions workflow vulnerability detection and AI-based fix suggestion tool
+# GitHub Actions 워크플로우 취약점 자동 수정 도구
 
-GitHub Actions 워크플로우에서 발생할 수 있는 보안 취약점을
-자동으로 탐지하고 AI를 활용하여 수정 방법을 제안하는 프로젝트입니다.
+GitHub 저장소의 Pull Request(PR)를 기반으로 GitHub Actions 워크플로우의 주요 보안 취약 패턴을 분석하고, AI를 활용한 수정 제안을 PR에 제공하는 도구를 개발합니다.
 
-## Project Goal
+> 현재는 프로젝트 구조 설계와 기본 파일 구성을 마친 단계입니다. 아래 주요 기능은 구현 목표이며, 실행 가능한 분석 서버나 자동 수정 기능은 아직 제공하지 않습니다.
 
-- GitHub Actions 주요 보안 취약점 탐지
-- AI 기반 취약점 수정 방법 제안
-- GitHub PR에 분석 결과 제공
+## 프로젝트 배경
 
-## Tech Stack
+GitHub Actions 워크플로우의 잘못된 설정이나 과도한 권한 부여로 발생할 수 있는 보안 문제를 점검하고, 개발자가 수정 방향을 판단하는 데 도움을 주고자 합니다.
 
-- Python
-- FastAPI
-- Semgrep
-- GitHub API
-- LLM API
+취약점 탐지와 수정 제안 과정을 자동화하여 보안 점검 부담을 줄이는 것이 목표입니다. 개발 과정에서는 백엔드 개발, HTTP/REST API 연동, 정적 분석 기술을 학습하고 적용합니다.
 
-## Progress
+## 프로젝트 목표
 
-### Week 2
-- GitHub Actions 기본 개념 학습
-- GitHub Actions 보안 사례 조사
-- 프로젝트 Repository 구성
+- GitHub Actions 워크플로우의 주요 보안 취약 패턴 탐지
+- AI를 활용한 취약점 수정 방법 및 수정안 제안
+- 분석 결과와 수정 제안을 GitHub PR에 자동으로 제공
+- 개인 테스트 저장소를 이용한 전체 기능 검증
 
-- 초기 탐지 대상과 확장 대상 구분
-- 전체 처리 흐름 및 모듈별 역할 설계
-- 프로젝트 디렉터리와 기본 파일 생성
-- 현재는 구조 설계 단계이며 탐지, 서버, LLM 연동 등 기능은 구현하지 않음
+## 프로젝트 범위
 
-## Initial Detection Scope
+개인 테스트용 GitHub 저장소의 `.github/workflows/` 내 YAML 파일을 대상으로 합니다. 한 학기 동안 취약점 탐지부터 AI 수정 제안, GitHub PR 결과 제공까지의 핵심 기능을 구현합니다.
 
-1차 구현 대상으로 검토하는 취약점:
-- Script Injection
-- Excessive GITHUB_TOKEN Permissions
-- Unpinned Actions
+프로젝트 제목의 ‘자동 수정’은 AI가 수정안을 생성하고 제안하는 방향으로 진행합니다. 핵심 범위는 수정 제안의 제공이며, 수정 내용을 자동으로 병합하는 기능은 현재 계획에 포함하지 않습니다.
 
-Pwn Request와 Artifact Trust는 확장 대상으로 검토합니다.
-탐지된 모든 항목을 자동 수정할 수 있다고 가정하지 않으며,
-자동 수정 조건과 검증 기준은 각 기능 구현 시 정의합니다.
+초기 탐지 대상으로 검토한 항목은 다음과 같습니다.
 
-## Planned Flow
+| 초기 대상 | 분석할 내용 |
+| --- | --- |
+| Script Injection | 신뢰할 수 없는 입력을 실행 스크립트에 직접 삽입하는 패턴 |
+| Excessive GITHUB_TOKEN Permissions | 필요 이상으로 넓게 설정된 토큰 권한 |
+| Unpinned Actions | 커밋 SHA로 고정되지 않은 외부 Action 참조 |
+
+탐지 조건과 자동 수정 가능 조건은 구현 과정에서 구체화합니다. Pwn Request와 Artifact Trust는 확장 대상으로 검토합니다.
+
+## 주요 기능 및 처리 흐름 (예정)
+
+1. GitHub Webhook으로 PR 이벤트를 수신합니다.
+2. GitHub API로 분석 대상 워크플로우 파일을 조회합니다.
+3. Semgrep 기반 규칙으로 주요 취약 패턴을 분석합니다.
+4. 탐지 결과를 바탕으로 LLM API를 통해 수정 제안을 생성합니다.
+5. 수정안의 형식과 탐지 결과를 재검토합니다.
+6. 분석 결과와 수정 제안을 GitHub PR에 제공합니다.
+
+PR에 결과를 표시하는 구체적인 방식과 수정안 검증 기준은 연동 기능을 구현할 때 결정합니다.
+
+## 사용 기술 (예정)
+
+| 기술 | 용도 |
+| --- | --- |
+| Python | 백엔드 및 분석 로직 개발 |
+| FastAPI | Webhook 수신 및 백엔드 API 구성 |
+| Semgrep | 규칙 기반 워크플로우 정적 분석 |
+| GitHub REST API / Webhooks | PR 이벤트 수신, 파일 조회 및 분석 결과 제공 |
+| LLM API | 취약점 설명과 수정 제안 생성 |
+| Git / GitHub | 소스 코드 관리 및 개발 과정 기록 |
+
+LLM 제공자, 모델, 의존성 버전과 데이터 저장 방식은 추후 결정합니다.
+
+사전 학습 항목은 Python 기본 문법, HTTP/REST API 개념, Git/GitHub 사용법입니다.
+
+## 프로젝트 구조
 
 ```text
-GitHub Push / Pull Request
-  -> Webhook 수신
-  -> GitHub API로 Workflow 파일 수집
-  -> YAML 구조 분석 및 보안 규칙 기반 탐지
-  -> LLM 기반 수정안 생성
-  -> 수정안 검증 및 재분석
-  -> 검증을 통과한 수정안의 Pull Request 제안
+app/
+├── __init__.py
+├── main.py                 # 애플리케이션 진입점
+├── webhook/                # 이벤트 수신 및 요청 검증
+├── analyzer/               # Workflow 파싱 및 취약 패턴 분석
+├── fixer/                  # AI 기반 수정 제안 생성
+├── validator/              # 수정안 검증 및 재분석
+├── github/                 # GitHub API 연동
+└── database/               # 분석 결과 저장 (도입 여부 미정)
+rules/                      # 보안 탐지 규칙
+tests/                      # 테스트 코드 및 Workflow 예제
+docs/                       # 학습 및 설계 문서
+.github/workflows/          # 프로젝트 자체의 GitHub Actions 워크플로우
+requirements.txt            # Python 의존성 목록
+.gitignore
+README.md
 ```
 
-## Project Structure
+현재 `app/`의 하위 모듈은 기본 파일만 갖춘 상태이며, `rules/`와 `tests/`에는 폴더 유지를 위한 `.gitkeep`만 있습니다.
 
-```text
-github-actions-security-fixer/
-├── .github/workflows/hello.yml   # 1주차 예제 워크플로
-├── app/
-│   ├── __init__.py
-│   ├── main.py                  # 애플리케이션 진입점 예정
-│   ├── webhook/__init__.py      # 이벤트 수신 및 요청 검증 예정
-│   ├── analyzer/__init__.py     # Workflow 파싱 및 취약점 탐지 예정
-│   ├── fixer/__init__.py        # LLM 기반 수정안 생성 예정
-│   ├── validator/__init__.py    # 수정안 검증 및 재분석 예정
-│   ├── github/__init__.py       # GitHub API 연동 예정
-│   └── database/__init__.py     # 분석 결과 저장 예정 (도입 여부 추후 결정)
-├── docs/
-│   └── week1-study.md
-├── rules/
-│   └── .gitkeep                 # 보안 탐지 규칙 추가 예정
-├── tests/
-│   └── .gitkeep                 # 테스트 및 취약/수정 예제 추가 예정
-├── .gitignore
-├── requirements.txt
-└── README.md
-```
+## 개발 계획
 
-`__init__.py`는 Python 패키지 구성을 위한 빈 파일입니다.
-Git은 빈 폴더를 추적하지 않으므로 `rules/`와 `tests/`에는 `.gitkeep`을 둡니다.
-실제 파일을 추가하면 해당 폴더의 `.gitkeep`은 제거해도 됩니다.
+기본 진행 기간은 **9월 14일~12월 27일**입니다. 핵심 기능 완성 후 여유가 있으면 다음 해 1월까지 배포 및 확장을 검토합니다.
 
-## Current Setup
+자료 조사 및 기술 학습 → 프로젝트 설계 → 백엔드 개발 → 취약점 분석 → AI 및 GitHub 연동 → 통합 테스트 → 결과 정리 및 발표 순서로 진행합니다.
 
-현재 실행 가능한 서버나 분석 명령은 없습니다.
-`app/main.py`는 진입점 자리만 마련한 파일이며,
-`requirements.txt`는 기능 구현 시 필요한 의존성과 버전을 추가할 예정입니다.
-지금은 패키지 설치나 API 키 설정이 필요하지 않습니다.
+| 기간 | 계획 |
+| --- | --- |
+| 9/14~9/20 | 자료 조사, 개발 환경 구성 및 기초 학습 |
+| 9/21~9/27 | 취약 사례 분석 및 프로젝트 구조 설계 |
+| 9/28~10/4 | FastAPI 기반 백엔드 기본 기능 구현 |
+| 10/5~10/25 | Semgrep 기반 워크플로우 취약점 분석 구현 |
+| 10/26~11/1 | AI API 연동 및 수정 제안 기능 구현 |
+| 11/2~11/8 | GitHub API 연동 및 PR 결과 제공 |
+| 11/9~11/15 | 분석 및 수정 제안 기능 연동 |
+| 11/16~11/22 | 테스트 저장소를 활용한 통합 테스트 |
+| 11/23~11/29 | 오류 수정 및 문서 정리 |
+| 11/30~12/20 | 최종 점검, 데모 및 발표 자료 준비 |
+| 12/21~12/27 | 최종 발표 및 결과 정리 |
+
+개발 과정은 GitHub Repository와 주간보고서에 기록합니다. README에는 프로젝트 전반의 설명과 현재 상태를 유지하고, 주차별 상세 기록은 별도 문서로 관리합니다.
+
+## 실행 안내
+
+현재 실행 가능한 서버나 분석 명령은 없습니다. `requirements.txt`에는 의존성이 아직 등록되어 있지 않습니다. 기능 구현 후 설치 방법, 환경 변수와 실행 명령을 추가할 예정입니다.
+
+## 프로젝트 문서
+
+- [1주차 학습 기록](docs/week1-study.md)
+- [2주차 구조 설계](docs/week2-design.md)
+
+API 명세와 테스트 결과 문서는 해당 기능 구현 후 추가할 예정입니다.
+
+## 예상 산출물
+
+- 소스 코드 및 개발 기록을 관리하는 GitHub Repository
+- 테스트 저장소를 이용한 동작 데모
+- README, 설계 문서 및 API 명세
+- 최종 발표 자료
+
+## 참고 자료
+
+- Semgrep 공식 문서
+- GitHub REST API / Webhooks 공식 문서
+- LLM API 공식 문서
+- OWASP의 GitHub Actions 보안 관련 자료
+- GitHub Actions 보안 취약 사례
