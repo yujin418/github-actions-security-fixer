@@ -95,9 +95,10 @@ vulnerable/unpinned-actions.yml       [MEDIUM] L15 actions/checkout@v4
 - Script Injection 은 `run` 만 대상으로 하며 `actions/github-script` 등은 미포함.
 
 다음 단계:
-1. 탐지 결과를 바탕으로 한 LLM 수정안 생성(`app/fixer/`) 설계.
-2. 수정안 형식 검증과 취약점 재분석(`app/validator/`) 연결.
-3. Unpinned Actions 의 태그→커밋 SHA 조회를 위한 GitHub API 연동 검토.
+1. FastAPI 기본 서버와 Webhook 수신·요청 검증(`app/webhook/`) 구현, GitHub 이벤트에서 Workflow 파일을 수집해 이번 주 탐지 엔진에 연결.
+2. 탐지 결과를 바탕으로 한 LLM 수정안 생성(`app/fixer/`) 설계.
+3. 수정안 형식 검증과 취약점 재분석(`app/validator/`) 연결.
+4. Unpinned Actions 의 태그→커밋 SHA 조회를 위한 GitHub API 연동 검토.
 
 ## 8. 관련 문서
 
