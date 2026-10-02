@@ -1,0 +1,25 @@
+# Script Injection 탐지 규칙 정의
+# 이 파일은 탐지 조건·제외 조건·자동 수정 가능 조건을 선언적으로 기록한다.
+# 실제 탐지 로직은 app/analyzer/detectors.py 에서 이 메타데이터를 사용한다.
+id: script-injection
+name: Script Injection
+severity: high
+autofixable: false
+description: >-
+  신뢰할 수 없는 입력(github.event.* 등)이 run 스크립트에 ${{ }} 로 직접 삽입되어
+  셸 명령으로 실행될 수 있는 패턴.
+rationale: >-
+  이슈 제목·본문, PR 제목·본문, 댓글, 커밋 메시지 등 공격자가 제어할 수 있는 값이
+  셸로 그대로 전달되면 임의 명령 실행으로 이어질 수 있다.
+detect:
+  - run 블록 안의 ${{ ... }} 표현식이 신뢰할 수 없는 컨텍스트를 참조하는 경우
+exclude:
+  - 참조 값이 신뢰 컨텍스트(github.sha, github.run_id, matrix.* 등)인 경우
+  - run 이 아닌 곳(예: 단순 출력용 env 선언만)에서 사용되는 경우는 이번 범위에서 제외
+autofix_condition: >-
+  값을 env 로 먼저 바인딩하고 run 에서 "$VAR" 로 참조하도록 바꾸면 해소되지만,
+  셸 종류와 인용 방식에 따라 동작이 달라질 수 있어 이번 주에는 제안만 하고 자동 수정은 하지 않는다.
+remediation: >-
+  입력을 env 로 전달한 뒤 run 에서 따옴표로 감싼 환경변수("$TITLE")로 사용한다.
+references:
+  - https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections

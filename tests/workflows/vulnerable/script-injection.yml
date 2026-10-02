@@ -1,0 +1,15 @@
+# 취약 예제: 신뢰할 수 없는 입력을 run 에 직접 삽입 (Script Injection)
+name: Vulnerable Script Injection
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Print issue title
+        run: echo "${{ github.event.issue.title }}"

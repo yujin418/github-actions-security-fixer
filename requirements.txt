@@ -1,1 +1,5 @@
-# Add dependencies and their versions when implementation begins.
+# Runtime
+PyYAML>=6.0
+
+# Development / tests
+pytest>=8.0

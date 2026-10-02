@@ -1,0 +1,19 @@
+# 취약 예제: 외부 Action 을 태그/브랜치로 참조 (커밋 SHA 미고정)
+name: Vulnerable Unpinned Actions
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (tag ref)
+        uses: actions/checkout@v4
+      - name: Setup Node (branch ref)
+        uses: actions/setup-node@main
+      - name: Build
+        run: echo "building"

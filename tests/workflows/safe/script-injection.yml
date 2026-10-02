@@ -1,0 +1,18 @@
+# 정상 예제: 신뢰할 수 없는 입력을 env 로 전달 후 환경변수로 사용
+name: Safe Script Injection
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print issue title
+        env:
+          TITLE: ${{ github.event.issue.title }}
+        run: echo "New issue: $TITLE"

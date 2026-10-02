@@ -1,0 +1,16 @@
+# 취약 예제: GITHUB_TOKEN 권한을 write-all 로 과도하게 부여
+name: Vulnerable Excessive Permissions
+
+on:
+  push:
+
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Build
+        run: echo "building"

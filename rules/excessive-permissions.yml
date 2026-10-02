@@ -1,0 +1,26 @@
+# Excessive GITHUB_TOKEN Permissions 탐지 규칙 정의
+id: excessive-permissions
+name: Excessive GITHUB_TOKEN Permissions
+severity: medium
+autofixable: false
+description: >-
+  GITHUB_TOKEN 권한이 필요 이상으로 넓게 설정되었거나, 명시되지 않아 저장소 기본값
+  (넓을 수 있음)이 적용되는 패턴.
+rationale: >-
+  토큰 권한이 넓으면 침해된 스텝이나 외부 Action이 저장소에 과도한 변경을 가할 수 있다.
+  최소 권한 원칙에 따라 필요한 범위만 부여해야 한다.
+detect:
+  - 워크플로우 또는 잡 수준에 permissions:write-all 이 설정된 경우 (명백한 과잉 권한)
+  - 워크플로우와 모든 잡에 permissions 블록이 전혀 없는 경우 (기본값 적용, 검토 필요)
+exclude:
+  - permissions 가 세분화되어 있고 write-all 이 아닌 경우
+    (개별 write 스코프의 적정성은 작업 내용에 따라 달라 이번 범위에서 판단하지 않음)
+autofix_condition: >-
+  작업에 실제로 필요한 권한 범위는 분석만으로 단정할 수 없으므로 자동 수정하지 않고
+  검토 대상으로 남긴다. (예: permissions: contents: read 로 좁히는 제안만 가능)
+remediation: >-
+  워크플로우 상단 또는 각 잡에 최소 권한을 명시한다. 기본은 contents: read 로 두고
+  필요한 스코프만 write 로 추가한다.
+references:
+  - https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+  - https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs

@@ -1,0 +1,26 @@
+# Unpinned Actions 탐지 규칙 정의
+id: unpinned-actions
+name: Unpinned Actions
+severity: medium
+autofixable: false
+description: >-
+  외부 Action 참조가 전체 커밋 SHA(40자리)로 고정되지 않고 태그나 브랜치로
+  참조되는 패턴.
+rationale: >-
+  태그나 브랜치는 이동할 수 있어 동일 참조가 가리키는 코드가 바뀔 수 있다.
+  공급망 공격을 줄이려면 외부 Action을 불변한 커밋 SHA로 고정해야 한다.
+detect:
+  - uses 값이 owner/repo@ref 형식이고 ref 가 40자리 16진수 SHA 가 아닌 경우
+  - 잡 수준 재사용 워크플로우(uses)도 동일하게 확인
+exclude:
+  - 로컬 Action 참조(./ 로 시작)
+  - 이미 40자리 커밋 SHA 로 고정된 경우
+  - docker:// 참조는 이번 범위에서 제외(다이제스트 고정은 별도 검토)
+autofix_condition: >-
+  태그를 대응하는 커밋 SHA 로 바꾸려면 GitHub API 로 ref 를 조회해야 하므로
+  네트워크 연동이 준비되는 단계에서 자동 수정을 지원한다. 이번 주에는 탐지만 한다.
+remediation: >-
+  uses 의 참조를 해당 버전의 전체 커밋 SHA 로 고정하고, 가독성을 위해 버전 태그를
+  주석으로 남긴다. 예) uses: actions/checkout@<40-hex-sha> # v4
+references:
+  - https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-third-party-actions
