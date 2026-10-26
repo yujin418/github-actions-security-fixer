@@ -3,8 +3,8 @@
 GitHub Actions Workflow의 보안 취약 패턴을 탐지하고, **AI 수정안과 검증 결과를 GitHub Pull Request(PR)에 제공하는 도구**입니다.
 
 > 개발 초기 단계의 프로젝트입니다. 아래 기능과 일정은 구현 목표입니다.
-> 현재는 초기 3개 패턴에 대한 **규칙 기반 탐지**(`python -m app.analyzer`)까지 동작하며,
-> LLM 수정안 생성·검증·PR 연동과 Webhook 서버는 아직 제공하지 않습니다.
+> 현재는 **규칙 기반 탐지(CLI)** 와 **FastAPI Webhook 서버**(이벤트 수신·서명 검증·워크플로우 수집 → 탐지)까지 동작하며,
+> LLM 수정안 생성·검증·PR 연동은 아직 제공하지 않습니다.
 
 ## 프로젝트 소개
 
@@ -128,19 +128,25 @@ README.md
 
 ## 실행 안내
 
-현재 규칙 기반 탐지까지 실행할 수 있습니다. Webhook 서버는 아직 제공하지 않습니다.
+규칙 기반 탐지(CLI)와 FastAPI Webhook 서버를 실행할 수 있습니다.
 
 ```bash
 pip install -r requirements.txt
 
-# 워크플로우 디렉터리 스캔 (기본: .github/workflows)
+# 1) 워크플로우 디렉터리 스캔 (CLI)
 python -m app.analyzer tests/workflows
+
+# 2) Webhook 서버 실행
+cp .env.example .env            # GITHUB_WEBHOOK_SECRET, GITHUB_TOKEN 입력
+uvicorn app.main:app --reload   # 상태 확인: GET http://127.0.0.1:8000/health
 
 # 테스트 실행
 python -m pytest
 ```
 
-서버·환경 변수 관련 설치 방법은 Webhook 기능이 마련되면 추가합니다.
+`POST /webhook` 은 GitHub 이벤트(push·pull_request)를 받아 서명(HMAC-SHA256)을 검증한 뒤,
+해당 저장소의 `.github/workflows/*.yml` 을 수집해 탐지 결과를 JSON 으로 반환합니다.
+비밀값은 `.env`(커밋되지 않음)에 두며, 예시는 `.env.example` 을 참고합니다.
 
 ## 관련 문서
 
