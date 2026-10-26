@@ -152,3 +152,5 @@ python -m pytest
 
 - [GitHub Actions 기초 학습](docs/week1-study.md)
 - [분석 범위 및 프로젝트 구조 설계](docs/week2-design.md)
+- [초기 탐지 규칙 구현](docs/week3-detection.md)
+- [FastAPI 서버·Webhook 구현 및 FastAPI/REST 조사](docs/week4-backend.md)
