@@ -140,6 +140,9 @@ python -m app.analyzer tests/workflows
 cp .env.example .env            # GITHUB_WEBHOOK_SECRET, GITHUB_TOKEN 입력
 uvicorn app.main:app --reload   # 상태 확인: GET http://127.0.0.1:8000/health
 
+# 3) 탐지 → AI 수정안 데모 (발표용)
+python scripts/demo_fixer.py
+
 # 테스트 실행
 python -m pytest
 ```
