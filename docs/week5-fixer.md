@@ -26,6 +26,7 @@ Finding(탐지 결과) + 워크플로우 원문
 | `app/fixer/llm.py` | LLM 클라이언트 추상화(`LLMClient` 프로토콜), `MockLLMClient`, `AnthropicClient`(지연 로드·미검증) |
 | `app/fixer/__init__.py` | `FixSuggestion`, `build_prompt`, `generate_fix`, `generate_fixes` |
 | `tests/test_fixer.py` | 프롬프트 구성·JSON 파싱·폴백·다건 처리 테스트 7건 |
+| `scripts/demo_fixer.py` | 탐지→수정안·변경 이유 출력 데모(발표용, Mock 예시 응답) |
 | `.env.example` | `ANTHROPIC_API_KEY`·`LLM_MODEL`(선택) 항목 추가 |
 
 `FixSuggestion` 필드: `rule_id`, `file`, `line`, `original`(탐지 근거), `suggestion`(수정안), `reason`(변경 이유), `model`(생성 모델).
@@ -45,15 +46,17 @@ Finding(탐지 결과) + 워크플로우 원문
 ## 6. 검증 결과
 
 ```text
-python -m pytest        # 23 passed (분석 10 + 서버 6 + fixer 7)
+python -m pytest            # 23 passed (분석 10 + 서버 6 + fixer 7)
 
-# end-to-end 데모 (analyze -> generate_fixes, Mock LLM)
-unpinned-actions L15  uses: actions/checkout@v4
-  수정안: uses: actions/checkout@<40-hex-sha>  # v4
-  이유:   태그는 이동 가능하므로 불변한 커밋 SHA로 고정  (model=mock)
+python scripts/demo_fixer.py   # 발표용 데모 (어느 셸에서나 한글 출력)
+# [MEDIUM] excessive-permissions  -> permissions: contents: read      + 이유
+# [HIGH]   script-injection       -> env 바인딩 후 "$TITLE"           + 이유
+# [MEDIUM] unpinned-actions        -> actions/checkout@<SHA>  # v4      + 이유
+# [MEDIUM] unpinned-actions        -> actions/setup-node@<SHA> # main   + 이유
+# 총 4건 탐지·수정안 생성 (3개 파일)
 ```
 
-- 모킹 클라이언트로 전 과정(탐지→수정안) 동작 확인. 실제 LLM 호출은 **미검증(확인 필요)**.
+- 모킹 클라이언트로 전 과정(탐지→수정안) 동작 확인. 데모는 규칙별 예시 응답(Mock)이며, 실제 LLM 호출은 **미검증(확인 필요)**.
 
 ## 7. 한계와 다음 단계
 
@@ -71,4 +74,4 @@ unpinned-actions L15  uses: actions/checkout@v4
 
 - [프로젝트 소개](../README.md)
 - [1주차](week1-study.md) · [2주차](week2-design.md) · [3주차](week3-detection.md) · [4주차](week4-backend.md)
-- 커밋: 이 문서 커밋 후 본문에 해시·메시지 기록 예정.
+- 커밋: `ed4864f`(fixer 구현) · `498b58d`(탐지→수정안 데모 스크립트)
