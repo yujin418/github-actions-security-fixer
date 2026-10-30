@@ -154,3 +154,4 @@ python -m pytest
 - [분석 범위 및 프로젝트 구조 설계](docs/week2-design.md)
 - [초기 탐지 규칙 구현](docs/week3-detection.md)
 - [FastAPI 서버·Webhook 구현 및 FastAPI/REST 조사](docs/week4-backend.md)
+- [AI 수정안 및 변경 이유 생성](docs/week5-fixer.md)
