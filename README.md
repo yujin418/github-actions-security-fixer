@@ -158,3 +158,4 @@ python -m pytest
 - [초기 탐지 규칙 구현](docs/week3-detection.md)
 - [FastAPI 서버·Webhook 구현 및 FastAPI/REST 조사](docs/week4-backend.md)
 - [AI 수정안 및 변경 이유 생성](docs/week5-fixer.md)
+- [수정안 검증 및 결과 제공](docs/week6-validator.md)
