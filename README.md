@@ -143,6 +143,9 @@ uvicorn app.main:app --reload   # 상태 확인: GET http://127.0.0.1:8000/healt
 # 3) 탐지 → AI 수정안 데모 (발표용)
 python scripts/demo_fixer.py
 
+# 3-1) 탐지 → 수정안 → 적용 → 검증 → PR 코멘트 전 과정 데모
+python scripts/demo_pipeline.py
+
 # 테스트 실행
 python -m pytest
 ```
