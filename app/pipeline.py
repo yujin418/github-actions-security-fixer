@@ -28,15 +28,21 @@ class PipelineItem:
     note: str = ""
 
 
-def build_llm() -> LLMClient | None:
-    """환경변수에 키·모델이 있으면 실제 LLM 클라이언트를, 없으면 None을 반환."""
-    key = os.environ.get("ANTHROPIC_API_KEY")
-    model = os.environ.get("LLM_MODEL")
-    if key and model:
-        from app.fixer.llm import AnthropicClient
+DEFAULT_LLM_MODEL = "claude-haiku-4-5-20251001"
 
-        return AnthropicClient(key, model)
-    return None
+
+def build_llm() -> LLMClient | None:
+    """ANTHROPIC_API_KEY 가 있으면 실제 LLM 클라이언트를, 없으면 None을 반환.
+
+    LLM_MODEL 을 지정하지 않으면 비용이 낮은 기본 모델을 사용한다.
+    """
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        return None
+    model = os.environ.get("LLM_MODEL") or DEFAULT_LLM_MODEL
+    from app.fixer.llm import AnthropicClient
+
+    return AnthropicClient(key, model)
 
 
 def run_pipeline(
