@@ -67,3 +67,33 @@ class AnthropicClient:
         return "".join(
             block.text for block in message.content if getattr(block, "type", None) == "text"
         )
+
+
+class OpenAIClient:
+    """Real client using the OpenAI API.
+
+    Requires ``OPENAI_API_KEY`` and the ``openai`` package; both are imported/
+    checked lazily so the project runs without them when the mock is used.
+    """
+
+    name = "openai"
+
+    def __init__(self, api_key: str | None = None, model: str | None = None):
+        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        self.model = model or os.environ.get("LLM_MODEL") or "gpt-4o-mini"
+
+    def complete(self, prompt: str) -> str:
+        if not self.api_key:
+            raise RuntimeError("OPENAI_API_KEY 가 설정되지 않았습니다.")
+        try:
+            from openai import OpenAI
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            raise RuntimeError("openai 패키지가 필요합니다: pip install openai") from exc
+
+        client = OpenAI(api_key=self.api_key)
+        response = client.chat.completions.create(
+            model=self.model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content or ""

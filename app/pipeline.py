@@ -28,21 +28,30 @@ class PipelineItem:
     note: str = ""
 
 
-DEFAULT_LLM_MODEL = "claude-haiku-4-5-20251001"
+DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 
 
 def build_llm() -> LLMClient | None:
-    """ANTHROPIC_API_KEY 가 있으면 실제 LLM 클라이언트를, 없으면 None을 반환.
+    """설정된 키에 따라 LLM 클라이언트를 만든다. 없으면 None.
 
-    LLM_MODEL 을 지정하지 않으면 비용이 낮은 기본 모델을 사용한다.
+    우선순위: OPENAI_API_KEY -> ANTHROPIC_API_KEY. 모델은 LLM_MODEL 로 지정하며,
+    비워두면 각 제공자의 기본 모델을 사용한다.
     """
-    key = os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
-        return None
-    model = os.environ.get("LLM_MODEL") or DEFAULT_LLM_MODEL
-    from app.fixer.llm import AnthropicClient
+    model = os.environ.get("LLM_MODEL") or None
 
-    return AnthropicClient(key, model)
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if openai_key:
+        from app.fixer.llm import OpenAIClient
+
+        return OpenAIClient(openai_key, model)
+
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        from app.fixer.llm import AnthropicClient
+
+        return AnthropicClient(anthropic_key, model or DEFAULT_ANTHROPIC_MODEL)
+
+    return None
 
 
 def run_pipeline(

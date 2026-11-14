@@ -25,7 +25,7 @@ from app.pipeline import build_llm  # noqa: E402  (.env 는 app import 시 로�
 def main() -> int:
     llm = build_llm()
     if llm is None:
-        print("LLM 키가 설정되지 않았습니다. .env 에 ANTHROPIC_API_KEY 를 입력하세요.")
+        print("LLM 키가 설정되지 않았습니다. .env 에 OPENAI_API_KEY 또는 ANTHROPIC_API_KEY 를 입력하세요.")
         return 2
 
     print(f"모델 연동 시도 (name={llm.name}) ...")
