@@ -32,7 +32,7 @@ POST /webhook (서명 검증)
 
 ## 4. 설계 결정
 
-- **LLM 주입식 + build_llm**: `run_pipeline(workflows, llm)`은 주입된 클라이언트로 테스트한다. `build_llm()`은 `ANTHROPIC_API_KEY`·`LLM_MODEL`이 있으면 실제 클라이언트를, 없으면 `None`을 돌려줘 **키 없이도 탐지만으로 동작**한다.
+- **LLM 주입식 + build_llm**: `run_pipeline(workflows, llm)`은 주입된 클라이언트로 테스트한다. `build_llm()`은 `OPENAI_API_KEY`→`ANTHROPIC_API_KEY` 순으로 실제 클라이언트를 선택하고, 키가 없으면 `None`을 돌려줘 **키 없이도 탐지만으로 동작**한다. 비밀값은 `.env`(python-dotenv 자동 로드)에만 둔다.
 - **전체 수정 워크플로우 방식**: 스니펫 대신 LLM에게 **수정된 전체 YAML**을 받아, 그대로 `validate_fix`로 재분석한다. "고친 결과가 실제로 유효하고 취약점을 없앴는가"를 바로 판정할 수 있다.
 - **느슨한 실패 처리**: 수정안 파싱 실패 시 해당 항목은 검토 대상으로 남기고 파이프라인은 계속된다. 탐지 없는 파일은 건너뛴다.
 - **결과는 report(마크다운)까지**: 실제 PR 게시(GitHub API 쓰기)는 다음 단계.
@@ -40,8 +40,10 @@ POST /webhook (서명 검증)
 ## 5. 구현 중 겪은 문제와 해결
 
 1. **기존 webhook 응답 호환** — 응답에 `report`를 추가하되 `repo·ref·files·findings` 키를 유지해 기존 테스트가 깨지지 않게 했다.
-2. **키 없는 환경** — `build_llm`이 키·모델이 모두 있을 때만 실제 클라이언트를 import·생성하도록 해, `anthropic` 미설치·키 미설정에서도 동작한다.
+2. **키 없는 환경** — `build_llm`이 키가 있을 때만 실제 클라이언트를 import·생성하도록 해, SDK 미설치·키 미설정에서도 동작한다. 테스트는 `conftest`로 실제 키를 제거해 격리했다.
 3. **데모 일원화** — `scripts/demo_pipeline.py`를 실제 `run_pipeline`을 쓰도록 바꿔(데모용 LLM 주입), 데모와 실제 코드 경로를 일치시켰다.
+4. **401 invalid x-api-key** — 키가 `ANTHROPIC_API_KEY` 칸에 있었으나 실제로는 OpenAI 키였다. **OpenAI 클라이언트를 추가**하고 키를 `OPENAI_API_KEY`로 옮겨 해결.
+5. **zstd 압축 해제 오류**(`Decompressor ... output_buffer_limit`) — httpx+zstandard 조합 문제. 클라이언트에 `Accept-Encoding: gzip, deflate`를 지정해 zstd 요청 자체를 피해 해결.
 
 ## 6. 검증 결과
 
@@ -52,25 +54,41 @@ python scripts/demo_pipeline.py   # 전체 파이프라인 데모
 # .github/workflows/unpinned-actions.yml  -> 검증 ✅ 통과
 # .github/workflows/excessive-permissions.yml -> 검증 ✅ 통과
 # + PR 코멘트 미리보기 출력
+
+python scripts/check_llm.py       # 실제 LLM 연동 확인
+# name=openai -> ✅ 실제 LLM 연동이 정상 동작합니다
 ```
 
 - 모킹/데모 LLM으로 전 과정(탐지→수정안→검증→리포트) 동작 확인.
-- 실제 LLM 호출 경로(`build_llm`→`AnthropicClient`)는 구성했으나, 키·패키지가 필요해 **실제 호출은 미검증(확인 필요)**.
+- **실제 OpenAI 연동 성공**(`check_llm`). 키가 있으면 `/webhook` 파이프라인이 실제 LLM으로 수정안을 생성한다.
 
 ## 7. 한계와 다음 단계
 
 알려진 한계:
-- 실제 LLM 호출은 미검증(키·`anthropic` 설치 시 활성화).
+- 실제 LLM **호출은 OpenAI로 검증**했으나, 수정안의 품질·취약점 해소율 평가는 아직 못 했다.
 - 결과는 JSON `report`로 반환만 하며, **실제 PR 코멘트 게시는 미구현**.
 - 수정안 품질은 LLM·프롬프트에 의존하며, 복잡한 수정은 검증에서 걸러진다(통과만 신뢰).
 
 다음 단계:
-1. 실제 LLM 연동 검증(`.env`에 키·모델 설정, `pip install anthropic`).
+1. 테스트 저장소를 활용한 통합 테스트(11/16~) — 실제 LLM 수정안의 품질·해소율 평가.
 2. 통과한 수정안을 PR 코멘트/브랜치로 게시(GitHub API 쓰기).
-3. 테스트 저장소를 활용한 통합 테스트(11/16~).
+3. 프롬프트·모델 튜닝, 비용/토큰 관리.
 
-## 8. 관련 문서 및 커밋
+## 8. 실제 LLM 연동 (OpenAI / Anthropic)
 
-- [프로젝트 소개](../README.md)
+제공자 추상화(`LLMClient.complete`)에 OpenAI·Anthropic 클라이언트를 붙였다.
+자세한 API 비교·조사는 [LLM API 조사](week7-llm-study.md) 참고.
+
+| 구분 | 내용 |
+| --- | --- |
+| 추상화 | `LLMClient.complete(prompt)` 단일 인터페이스 |
+| 선택 | `build_llm`: `OPENAI_API_KEY` → `ANTHROPIC_API_KEY` 순 |
+| 기본 모델 | OpenAI `gpt-4o-mini` / Anthropic `claude-haiku-4-5-20251001` |
+| 키 관리 | `.env`(커밋 제외), dotenv 자동 로드 |
+| 검증 | OpenAI 연동 성공(`check_llm`), 테스트는 모킹으로 격리 |
+
+## 9. 관련 문서 및 커밋
+
+- [프로젝트 소개](../README.md) · [LLM API 조사](week7-llm-study.md)
 - [1주차](week1-study.md) · [2주차](week2-design.md) · [3주차](week3-detection.md) · [4주차](week4-backend.md) · [5주차](week5-fixer.md) · [6주차](week6-validator.md)
-- 커밋: 이 문서 커밋 시 해시 기록.
+- 커밋: `8b78e2f`(파이프라인) · `2121c5f`(LLM 설정) · `552037e`(OpenAI 추가) · `412c3ed`(zstd 수정)
