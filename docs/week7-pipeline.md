@@ -77,7 +77,6 @@ python scripts/check_llm.py       # 실제 LLM 연동 확인
 ## 8. 실제 LLM 연동 (OpenAI / Anthropic)
 
 제공자 추상화(`LLMClient.complete`)에 OpenAI·Anthropic 클라이언트를 붙였다.
-자세한 API 비교·조사는 [LLM API 조사](week7-llm-study.md) 참고.
 
 | 구분 | 내용 |
 | --- | --- |
@@ -89,6 +88,6 @@ python scripts/check_llm.py       # 실제 LLM 연동 확인
 
 ## 9. 관련 문서 및 커밋
 
-- [프로젝트 소개](../README.md) · [LLM API 조사](week7-llm-study.md)
+- [프로젝트 소개](../README.md)
 - [1주차](week1-study.md) · [2주차](week2-design.md) · [3주차](week3-detection.md) · [4주차](week4-backend.md) · [5주차](week5-fixer.md) · [6주차](week6-validator.md)
 - 커밋: `8b78e2f`(파이프라인) · `2121c5f`(LLM 설정) · `552037e`(OpenAI 추가) · `412c3ed`(zstd 수정)
