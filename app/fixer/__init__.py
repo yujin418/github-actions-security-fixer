@@ -10,13 +10,21 @@ so a malformed response never crashes the pipeline.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
 
 from app.analyzer.models import Finding
 
 from .llm import LLMClient, MockLLMClient
 
-__all__ = ["FixSuggestion", "build_prompt", "generate_fix", "generate_fixes", "MockLLMClient"]
+__all__ = [
+    "FixSuggestion",
+    "build_prompt",
+    "generate_fix",
+    "generate_fixes",
+    "suggest_fixed_workflow",
+    "MockLLMClient",
+]
 
 
 @dataclass
@@ -107,3 +115,48 @@ def generate_fixes(
     findings: list[Finding], workflow_text: str, llm: LLMClient
 ) -> list[FixSuggestion]:
     return [generate_fix(f, workflow_text, llm) for f in findings]
+
+
+_FIX_WORKFLOW_PROMPT = """다음 GitHub Actions 워크플로우에서 탐지된 보안 취약점을
+최소 수정으로 고치세요. 기존 동작은 유지하고 문제 부분만 바꿉니다.
+
+탐지된 취약점:
+{issues}
+
+원본 워크플로우:
+```yaml
+{workflow}
+```
+
+수정된 전체 워크플로우 YAML만 아래 형식으로 반환하세요:
+```yaml
+<수정된 워크플로우>
+```
+"""
+
+
+def _extract_yaml(raw: str) -> str | None:
+    """LLM 응답에서 코드펜스로 감싼 YAML(또는 전체 텍스트)을 추출한다."""
+    match = re.search(r"```(?:yaml)?\s*(.*?)```", raw, re.DOTALL)
+    if match:
+        body = match.group(1).strip()
+    else:
+        body = raw.strip()
+    return body + "\n" if body else None
+
+
+def suggest_fixed_workflow(
+    workflow_text: str, findings: list[Finding], llm: LLMClient
+) -> tuple[str | None, str]:
+    """탐지된 취약점을 모두 반영한 **전체 수정 워크플로우**를 LLM에게 요청한다.
+
+    반환: (수정된 워크플로우 텍스트 또는 None, 설명 메모).
+    파싱에 실패하면 (None, 사유)를 돌려줘 파이프라인이 멈추지 않게 한다.
+    """
+    issues = "\n".join(f"- {f.rule_name} (L{f.line}): {f.evidence}" for f in findings)
+    prompt = _FIX_WORKFLOW_PROMPT.format(issues=issues, workflow=workflow_text)
+    raw = llm.complete(prompt)
+    fixed = _extract_yaml(raw)
+    if fixed is None:
+        return None, "수정안 파싱 실패 — 수동 검토 필요"
+    return fixed, f"LLM({getattr(llm, 'name', '?')}) 수정안"

@@ -1,16 +1,17 @@
-"""데모: 탐지 -> 수정안 -> 적용 -> 검증 -> PR 코멘트 (발표용 전 과정).
+"""데모: 전체 파이프라인(탐지→수정안→검증→PR 코멘트)을 실제 코드 경로로 시연.
 
 실행:  python scripts/demo_pipeline.py
 
-수정안/이유는 데모용 예시이며, 실제 연동 시 LLM이 생성한다. 기계적으로 적용 가능한
-규칙(unpinned-actions, excessive-permissions)만 자동 반영해 검증까지 보여준다.
+app.pipeline.run_pipeline 를 그대로 사용하며, LLM 자리에는 데모용 클라이언트를 넣는다.
+데모 클라이언트는 LLM 응답을 흉내 내어 기계적으로 고친 전체 워크플로우를 돌려준다.
+실제 운영에서는 ANTHROPIC_API_KEY·LLM_MODEL 설정 시 실제 모델이 그 자리를 대신한다.
 """
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
@@ -20,65 +21,63 @@ try:
 except Exception:  # pragma: no cover
     pass
 
-from app.analyzer import analyze_text  # noqa: E402
-from app.validator import format_pr_comment, validate_fix  # noqa: E402
+from app.pipeline import format_report, run_pipeline  # noqa: E402
 
-# 데모용 고정 SHA (실제로는 조회로 얻는다)
 SHA = "11bd71901bbe5b1630ceea73d27597364c9af683"
-
 TARGETS = ["unpinned-actions.yml", "excessive-permissions.yml"]
 
 
-def fix_for(finding):
-    """규칙별 수정안(스니펫)과 이유를 돌려준다 (데모 예시)."""
-    if finding.rule_id == "unpinned-actions":
-        ref = finding.evidence.split("uses:", 1)[1].strip()  # owner/repo@tag
-        repo, _, tag = ref.partition("@")
-        return f"{repo}@{SHA}  # {tag}", "태그·브랜치는 이동 가능하므로 불변한 커밋 SHA로 고정합니다."
-    if finding.rule_id == "excessive-permissions":
-        return "permissions:\n  contents: read", "write-all은 과도하므로 최소 권한(contents: read)만 부여합니다."
-    return "(수동 검토 필요)", finding.remediation
+def _apply_mechanical(text: str) -> str:
+    """unpinned 태그→SHA, write-all→contents:read 를 기계적으로 반영(데모용)."""
+
+    def pin(match: re.Match) -> str:
+        indent, repo, ref = match.group(1), match.group(2), match.group(3)
+        if re.fullmatch(r"[0-9a-f]{40}", ref):
+            return match.group(0)
+        return f"{indent}uses: {repo}@{SHA}  # {ref}"
+
+    text = re.sub(r"([ \t]*)uses:\s*([^\s@]+)@(\S+)", pin, text)
+    text = re.sub(
+        r"(?m)^([ \t]*)permissions:\s*write-all\s*$",
+        r"\1permissions:\n\1  contents: read",
+        text,
+    )
+    return text
 
 
-def apply_fixes(text: str, findings) -> str:
-    """기계적으로 적용 가능한 수정안을 워크플로우에 반영한다."""
-    fixed = text
-    for finding in findings:
-        if finding.rule_id == "unpinned-actions":
-            ref = finding.evidence.split("uses:", 1)[1].strip()
-            repo, _, tag = ref.partition("@")
-            fixed = fixed.replace(ref, f"{repo}@{SHA}  # {tag}")
-        elif finding.rule_id == "excessive-permissions":
-            fixed = fixed.replace("permissions: write-all", "permissions:\n  contents: read")
-    return fixed
+class DemoLLM:
+    """프롬프트 속 원본 워크플로우를 받아 '수정된 전체 YAML'을 돌려주는 데모 클라이언트."""
+
+    name = "demo"
+
+    def complete(self, prompt: str) -> str:
+        match = re.search(r"원본 워크플로우:\s*```yaml\s*(.*?)```", prompt, re.DOTALL)
+        original = match.group(1) if match else ""
+        return f"```yaml\n{_apply_mechanical(original)}\n```"
 
 
 def main() -> int:
-    print("탐지 -> 수정안 -> 적용 -> 검증 -> PR 코멘트 데모")
-    print("※ 수정안/이유는 데모용 예시, 실제 연동 시 LLM이 생성\n")
+    print("전체 파이프라인 데모: 탐지 → 수정안 → 검증 → PR 코멘트")
+    print("※ 수정안은 데모용(기계적) 응답, 실제 운영 시 LLM이 생성\n")
 
-    items = []
+    workflows = {}
     for name in TARGETS:
         path = REPO / "tests" / "workflows" / "vulnerable" / name
-        text = path.read_text(encoding="utf-8")
-        findings = analyze_text(text, file=f".github/workflows/{name}")
-        fixed = apply_fixes(text, findings)
-        result = validate_fix(text, fixed)
+        workflows[f".github/workflows/{name}"] = path.read_text(encoding="utf-8")
 
+    items = run_pipeline(workflows, DemoLLM())
+
+    for item in items:
         print("=" * 72)
-        print(f"파일: {name}")
-        for finding in findings:
-            suggestion, reason = fix_for(finding)
-            print(f"  [탐지]  [{finding.severity.upper()}] {finding.rule_id} (L{finding.line}): {finding.evidence}")
-            print(f"  [수정안] {suggestion.splitlines()[0]}" + (" ..." if "\n" in suggestion else ""))
-            print(f"  [이유]  {reason}")
-            items.append((finding, SimpleNamespace(suggestion=suggestion, reason=reason), result))
-        mark = "✅ 통과" if result.passed else "⚠️ 검토 필요"
-        print(f"  [검증]  {result.detail} -> {mark}")
-
+        print(f"파일: {item.file}")
+        for finding in item.findings:
+            print(f"  [탐지] [{finding.severity.upper()}] {finding.rule_id} (L{finding.line}): {finding.evidence}")
+        if item.validation is not None:
+            mark = "✅ 통과" if item.validation.passed else "⚠️ 검토 필요"
+            print(f"  [검증] {item.validation.detail} -> {mark}")
     print("=" * 72)
     print("\n--- PR 코멘트 미리보기 ---\n")
-    print(format_pr_comment(items))
+    print(format_report(items))
     return 0
 
 

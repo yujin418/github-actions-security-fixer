@@ -102,6 +102,40 @@ def test_webhook_push_runs_analyzer(monkeypatch):
     assert "excessive-permissions" in rule_ids
 
 
+def test_webhook_push_includes_report_with_llm(monkeypatch):
+    sha = "11bd71901bbe5b1630ceea73d27597364c9af683"
+    vuln = (
+        "name: t\non: [push]\npermissions:\n  contents: read\n"
+        "jobs:\n  b:\n    runs-on: ubuntu-latest\n    steps:\n"
+        "      - uses: actions/checkout@v4\n"
+    )
+    fixed = vuln.replace("@v4", f"@{sha}")
+    monkeypatch.setattr(
+        "app.github.client.collect_workflows",
+        lambda repo, ref, **kw: {".github/workflows/ci.yml": vuln},
+    )
+
+    class _LLM:
+        name = "mock"
+
+        def complete(self, prompt):
+            return f"```yaml\n{fixed}\n```"
+
+    monkeypatch.setattr("app.webhook.router.build_llm", lambda: _LLM())
+
+    payload = {"repository": {"full_name": "o/r"}, "after": "a" * 40, "ref": "refs/heads/main"}
+    body = json.dumps(payload).encode()
+    resp = client.post(
+        "/webhook",
+        content=body,
+        headers={"X-GitHub-Event": "push", "X-Hub-Signature-256": _sign(body)},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "report" in data
+    assert "✅ 통과" in data["report"]
+
+
 def test_webhook_missing_secret_returns_500(monkeypatch):
     monkeypatch.delenv("GITHUB_WEBHOOK_SECRET", raising=False)
     body = json.dumps({"zen": "x"}).encode()

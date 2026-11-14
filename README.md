@@ -162,3 +162,4 @@ python -m pytest
 - [FastAPI 서버·Webhook 구현 및 FastAPI/REST 조사](docs/week4-backend.md)
 - [AI 수정안 및 변경 이유 생성](docs/week5-fixer.md)
 - [수정안 검증 및 결과 제공](docs/week6-validator.md)
+- [전체 기능 연동 (파이프라인)](docs/week7-pipeline.md)
