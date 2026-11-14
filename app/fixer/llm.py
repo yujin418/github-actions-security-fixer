@@ -10,6 +10,10 @@ from __future__ import annotations
 import os
 from typing import Protocol, runtime_checkable
 
+# zstd 응답 압축 해제 경로(httpx+zstandard)가 환경에 따라 깨지는 문제를 피하려고
+# 서버에 zstd 를 요청하지 않는다. gzip/deflate 만 사용한다.
+_NO_ZSTD_HEADERS = {"Accept-Encoding": "gzip, deflate"}
+
 
 @runtime_checkable
 class LLMClient(Protocol):
@@ -58,7 +62,7 @@ class AnthropicClient:
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise RuntimeError("anthropic 패키지가 필요합니다: pip install anthropic") from exc
 
-        client = anthropic.Anthropic(api_key=self.api_key)
+        client = anthropic.Anthropic(api_key=self.api_key, default_headers=_NO_ZSTD_HEADERS)
         message = client.messages.create(
             model=self.model,
             max_tokens=1024,
@@ -90,7 +94,7 @@ class OpenAIClient:
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise RuntimeError("openai 패키지가 필요합니다: pip install openai") from exc
 
-        client = OpenAI(api_key=self.api_key)
+        client = OpenAI(api_key=self.api_key, default_headers=_NO_ZSTD_HEADERS)
         response = client.chat.completions.create(
             model=self.model,
             max_tokens=1024,
